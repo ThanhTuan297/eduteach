@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELI10 - Báo cáo</title>
+
+<!-- ============================================================
+     AUTH GUARD - Chặn truy cập trái phép ngay từ đầu <head>
+============================================================= -->
+<script>
+  if (localStorage.getItem('isLoggedIn') !== 'true') {
+    window.location.replace('index.html');
+  }
+</script>
+
+<!-- Tailwind CSS qua CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --green-900:#14532D;
+    --green-700:#15803D;
+    --green-600:#16A34A;
+    --green-500:#22C55E;
+    --green-400:#4ADE80;
+    --green-100:#DCFCE7;
+    --cream:#F6FBF6;
+  }
+  body{ font-family:'Inter', sans-serif; background-color: var(--cream); }
+  .font-display{ font-family:'Baloo 2', sans-serif; }
+
+  #mobileMenu{ max-height:0; overflow:hidden; transition:max-height 0.35s ease; }
+  #mobileMenu.open{ max-height:340px; }
+  #hamburgerBtn.open #barTop{ transform: translateY(6px) rotate(45deg); }
+  #hamburgerBtn.open #barMid{ opacity:0; }
+  #hamburgerBtn.open #barBot{ transform: translateY(-6px) rotate(-45deg); }
+  #hamburgerBtn span{ transition: transform 0.25s ease, opacity 0.25s ease; }
+
+  /* Bảng lịch sử: cho phép cuộn ngang trên màn hình nhỏ, không vỡ layout */
+  .table-scroll{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table{ min-width: 640px; }
+
+  /* Popup xác nhận xóa dữ liệu */
+  #confirmModal{ transition: opacity 0.2s ease; }
+</style>
+</head>
+
+<body class="min-h-screen">
+
+  <!-- ============================================================
+       THANH ĐIỀU HƯỚNG (NAVBAR)
+  ============================================================= -->
+  <header class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex items-center justify-between h-16">
+        <a href="trangchu.html" class="font-display font-extrabold text-xl tracking-tight" style="color: var(--green-700);">ELI10</a>
+
+        <nav class="hidden md:flex items-center gap-1">
+          <a href="trangchu.html" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">Trang chủ</a>
+          <a href="lophoc.html" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">Lớp học</a>
+          <a href="hocsinh.html" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">Học sinh</a>
+          <a href="giaoan.html" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">Giáo án</a>
+          <a href="baocao.html" class="px-4 py-2 rounded-lg text-sm font-semibold" style="background: var(--green-100); color: var(--green-700);">Báo cáo</a>
+        </nav>
+
+        <button id="logoutBtnDesktop" class="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition">
+          Đăng xuất
+        </button>
+
+        <button id="hamburgerBtn" class="md:hidden w-10 h-10 flex flex-col items-center justify-center gap-1.5" aria-label="Mở menu">
+          <span id="barTop" class="block w-6 h-0.5 rounded-full" style="background: var(--green-700);"></span>
+          <span id="barMid" class="block w-6 h-0.5 rounded-full" style="background: var(--green-700);"></span>
+          <span id="barBot" class="block w-6 h-0.5 rounded-full" style="background: var(--green-700);"></span>
+        </button>
+      </div>
+
+      <div id="mobileMenu" class="md:hidden">
+        <nav class="flex flex-col gap-1 pb-4">
+          <a href="trangchu.html" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Trang chủ</a>
+          <a href="lophoc.html" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Lớp học</a>
+          <a href="hocsinh.html" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Học sinh</a>
+          <a href="giaoan.html" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Giáo án</a>
+          <a href="baocao.html" class="px-4 py-2.5 rounded-lg text-sm font-semibold" style="background: var(--green-100); color: var(--green-700);">Báo cáo</a>
+          <button id="logoutBtnMobile" class="mt-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-left border border-gray-200 text-gray-600">Đăng xuất</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       NỘI DUNG CHÍNH
+  ============================================================= -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+    <!-- ===== Tiêu đề trang ===== -->
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+      <div>
+        <h1 class="font-display font-bold text-3xl sm:text-4xl" style="color: var(--green-900);">📊 Báo cáo &amp; Thống kê năng lực giảng dạy</h1>
+        <p class="text-gray-500 mt-2 max-w-xl text-sm sm:text-base">Theo dõi hành trình "làm giáo viên" của bạn qua từng buổi học 1-1 với các học sinh AI — càng dạy nhiều, càng hiểu học trò của mình hơn!</p>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <a href="trangchu.html" class="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 whitespace-nowrap">Trang chủ</a>
+        <a href="lophoc.html" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-md hover:brightness-105 whitespace-nowrap" style="background: linear-gradient(135deg, var(--green-500), var(--green-700));">Vào phòng học</a>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         3 THẺ TỔNG QUAN (Widgets)
+    ============================================================= -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+
+      <!-- Thẻ 1: Tổng số bài đã dạy -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-500">Tổng số bài đã dạy</p>
+            <p id="statTotalLessons" class="font-display font-bold text-3xl mt-1" style="color: var(--green-700);">0 <span class="text-base font-medium text-gray-400">bài</span></p>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background: var(--green-100);">📚</div>
+        </div>
+      </div>
+
+      <!-- Thẻ 2: Điểm kỷ lục cao nhất -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-500">Điểm kỷ lục cao nhất</p>
+            <p id="statHighestScore" class="font-display font-bold text-3xl mt-1" style="color: var(--green-700);">0<span class="text-base font-medium text-gray-400">/100đ</span></p>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background: var(--green-100);">🏆</div>
+        </div>
+      </div>
+
+      <!-- Thẻ 3: Điểm trung bình -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-500">Điểm trung bình</p>
+            <p id="statAverageScore" class="font-display font-bold text-3xl mt-1" style="color: var(--green-700);">0<span class="text-base font-medium text-gray-400">/100đ</span></p>
+          </div>
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background: var(--green-100);">📈</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         BẢNG LỊCH SỬ CÁC BUỔI HỌC
+    ============================================================= -->
+    <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <h2 class="font-display font-semibold text-lg" style="color: var(--green-900);">Lịch sử buổi học</h2>
+        <button id="clearHistoryBtn" class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border border-red-200 text-red-500 hover:bg-red-50 transition">
+          🗑️ Xóa lịch sử báo cáo
+        </button>
+      </div>
+
+      <!-- Bảng dữ liệu (ẩn khi trống) -->
+      <div id="historyTableWrapper" class="table-scroll hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-400 border-b border-gray-100">
+              <th class="py-2.5 pr-4 font-medium">Ngày học</th>
+              <th class="py-2.5 pr-4 font-medium">Học sinh</th>
+              <th class="py-2.5 pr-4 font-medium">Chủ đề</th>
+              <th class="py-2.5 pr-4 font-medium">Điểm số</th>
+              <th class="py-2.5 pr-4 font-medium">Nhận xét</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody" class="divide-y divide-gray-50">
+            <!-- Các dòng được JS chèn vào đây -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state: hiện khi chưa có buổi học nào -->
+      <div id="emptyState" class="text-center py-12">
+        <div class="text-5xl mb-3">🗒️</div>
+        <p class="font-display font-semibold text-base" style="color: var(--green-900);">Chưa có buổi học nào được ghi nhận</p>
+        <p class="text-sm text-gray-400 mt-1.5 max-w-sm mx-auto">Hoàn thành một buổi học 1-1 với học sinh AI để bắt đầu theo dõi tiến bộ giảng dạy của bạn tại đây.</p>
+        <a href="lophoc.html" class="mt-5 inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-white font-semibold text-sm shadow-md transition hover:brightness-105" style="background: linear-gradient(135deg, var(--green-500), var(--green-700));">
+          Đến phòng học ngay
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       POPUP XÁC NHẬN XÓA LỊCH SỬ
+  ============================================================= -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-[60] bg-black/40 flex items-center justify-center px-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
+      <div class="text-4xl mb-2">⚠️</div>
+      <h2 class="font-display font-bold text-lg" style="color: var(--green-900);">Xóa toàn bộ lịch sử báo cáo?</h2>
+      <p class="text-sm text-gray-500 mt-2">Thao tác này sẽ đặt lại tổng số bài đã dạy, điểm kỷ lục và toàn bộ lịch sử buổi học về 0. Không thể hoàn tác.</p>
+      <div class="mt-6 flex gap-3">
+        <button id="cancelClearBtn" class="flex-1 rounded-xl py-2.5 text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50">Hủy</button>
+        <button id="confirmClearBtn" class="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white shadow-md hover:brightness-105" style="background: linear-gradient(135deg, #EF4444, #B91C1C);">Xóa hết</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ============================================================
+  // PHẦN 1: XỬ LÝ MENU MOBILE & ĐĂNG XUẤT (logic chung)
+  // ============================================================
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const mobileMenu    = document.getElementById('mobileMenu');
+  hamburgerBtn.addEventListener('click', () => {
+    hamburgerBtn.classList.toggle('open');
+    mobileMenu.classList.toggle('open');
+  });
+
+  function xuLyDangXuat(){
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('username');
+    window.location.href = 'index.html';
+  }
+  document.getElementById('logoutBtnDesktop').addEventListener('click', xuLyDangXuat);
+  document.getElementById('logoutBtnMobile').addEventListener('click', xuLyDangXuat);
+
+  // ============================================================
+  // PHẦN 2: ĐỌC DỮ LIỆU THỐNG KÊ TỪ localStorage & VẼ GIAO DIỆN
+  // ============================================================
+  function layNhanXetTheoDiem(diem){
+    if (diem >= 90) return '🏆 Xuất sắc';
+    if (diem >= 70) return '😊 Khá tốt';
+    if (diem >= 50) return '🙂 Tạm ổn';
+    return '😅 Cần cố gắng thêm';
+  }
+
+  function dinhDangNgay(isoString){
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+             ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '—';
+    }
+  }
+
+  function taiVaHienThiBaoCao(){
+    const tongSoBai   = parseInt(localStorage.getItem('totalLessonsTaught') || '0', 10);
+    const diemCaoNhat = parseInt(localStorage.getItem('highestScore') || '0', 10);
+    const lichSu      = JSON.parse(localStorage.getItem('lessonHistory') || '[]');
+
+    // ----- Cập nhật 3 thẻ tổng quan -----
+    document.getElementById('statTotalLessons').innerHTML = tongSoBai + ' <span class="text-base font-medium text-gray-400">bài</span>';
+    document.getElementById('statHighestScore').innerHTML = diemCaoNhat + '<span class="text-base font-medium text-gray-400">/100đ</span>';
+
+    const diemTrungBinh = lichSu.length > 0
+      ? Math.round(lichSu.reduce((tong, buoi) => tong + (buoi.score || 0), 0) / lichSu.length)
+      : 0;
+    document.getElementById('statAverageScore').innerHTML = diemTrungBinh + '<span class="text-base font-medium text-gray-400">/100đ</span>';
+
+    // ----- Vẽ bảng lịch sử hoặc Empty State -----
+    const tableWrapper = document.getElementById('historyTableWrapper');
+    const tableBody     = document.getElementById('historyTableBody');
+    const emptyState    = document.getElementById('emptyState');
+
+    if (lichSu.length === 0) {
+      tableWrapper.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+    tableWrapper.classList.remove('hidden');
+    tableBody.innerHTML = '';
+
+    // Hiển thị buổi học gần nhất lên đầu bảng
+    [...lichSu].reverse().forEach(buoi => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-green-50/50 transition';
+      tr.innerHTML = `
+        <td class="py-3 pr-4 text-gray-500 whitespace-nowrap">${dinhDangNgay(buoi.date)}</td>
+        <td class="py-3 pr-4 font-medium" style="color: var(--green-900);">${buoi.studentName || '—'}</td>
+        <td class="py-3 pr-4 text-gray-600 max-w-[220px] truncate" title="${buoi.topic || ''}">${buoi.topic || '—'}</td>
+        <td class="py-3 pr-4 font-display font-bold" style="color: var(--green-700);">${buoi.score ?? 0}/100đ</td>
+        <td class="py-3 pr-4 text-gray-500 whitespace-nowrap">${layNhanXetTheoDiem(buoi.score ?? 0)}</td>
+      `;
+      tableBody.appendChild(tr);
+    });
+  }
+
+  taiVaHienThiBaoCao();
+
+  // ============================================================
+  // PHẦN 3: XÓA TOÀN BỘ LỊCH SỬ BÁO CÁO (kèm popup xác nhận)
+  // ============================================================
+  const confirmModal    = document.getElementById('confirmModal');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+  const cancelClearBtn  = document.getElementById('cancelClearBtn');
+  const confirmClearBtn = document.getElementById('confirmClearBtn');
+
+  clearHistoryBtn.addEventListener('click', () => {
+    confirmModal.classList.remove('hidden');
+    confirmModal.classList.add('flex');
+  });
+
+  cancelClearBtn.addEventListener('click', () => {
+    confirmModal.classList.add('hidden');
+    confirmModal.classList.remove('flex');
+  });
+
+  confirmClearBtn.addEventListener('click', () => {
+    localStorage.removeItem('totalLessonsTaught');
+    localStorage.removeItem('highestScore');
+    localStorage.removeItem('lessonHistory');
+
+    confirmModal.classList.add('hidden');
+    confirmModal.classList.remove('flex');
+
+    taiVaHienThiBaoCao(); // vẽ lại giao diện với dữ liệu đã về 0
+  });
+</script>
+
+</body>
+</html>
