@@ -168,7 +168,7 @@
           Gửi bài
         </button>
       </div>
-      <p id="apiKeyWarning" class="hidden text-xs text-red-500 mt-2">⚠️ Chưa có Gemini API Key. Vào trang "Học sinh" để cài đặt trước khi chat.</p>
+      <p id="apiKeyWarning" class="hidden text-xs text-red-500 mt-2">⚠️ Chưa có Groq API Key. Vào trang "Học sinh" để cài đặt trước khi chat.</p>
     </div>
   </div>
 
@@ -228,11 +228,12 @@ document.getElementById('logoutBtnMobile').addEventListener('click', xuLyDangXua
 
 // ================================================================
 // PHẦN 2: ĐỌC DỮ LIỆU LỚP HỌC TỪ localStorage
+//   -> Groq API Key được lưu dưới key "groq_api_key"
 // ================================================================
 const studentName  = localStorage.getItem('selected_student_name');
 const studentType  = localStorage.getItem('selected_student_type');
 const lessonTopic  = localStorage.getItem('selected_lesson_topic');
-const geminiApiKey = localStorage.getItem('geminiApiKey');
+const groqApiKey   = localStorage.getItem('groq_api_key');
 
 // ================================================================
 // PHẦN 3: CẤU HÌNH TÍNH CÁCH 3 HỌC SINH AI (System Prompt chi tiết)
@@ -256,11 +257,11 @@ QUY TẮC BẮT BUỘC:
   },
   'Sarah': {
     emoji: '😏',
-    badgeText: 'Lười biếng, thông minh',
+    badgeText: 'Thông minh, bướng bỉnh',
     badgeBg: '#FEF3C7',
     badgeColor: '#92400E',
     systemPrompt: `Bạn đang đóng vai một bé gái 10 tuổi tên Sarah, đang được thầy/cô dạy 1-1 qua tin nhắn.
-TÍNH CÁCH: Sarah rất thông minh nhưng lơ đễnh, hay giả vờ không hợp tác và không tập trung, dễ khiến người dạy bực mình.
+TÍNH CÁCH: Sarah rất thông minh nhưng lơ đễnh, bướng bỉnh, hay giả vờ không hợp tác và không tập trung, dễ khiến người dạy bực mình.
 QUY TẮC BẮT BUỘC:
 - Tuyệt đối KHÔNG được hiểu bài ngay chỉ sau 1-3 câu. Hay trả lời kiểu: "Ơ... thầy/cô vừa nói gì cơ? Em mải nhìn ra ngoài cửa sổ, nói lại đi ạ!" hoặc tỏ ra chán nản, lơ đãng.
 - Chỉ khi thầy/cô đưa ra thử thách, câu đố thú vị hoặc kích thích được sự tò mò thì Sarah mới chịu tập trung — và khi đã tập trung thì giải rất nhanh, thể hiện rõ sự thông minh.
@@ -312,8 +313,9 @@ if (!duLieuHopLe) {
 // ================================================================
 // PHẦN 5: TRẠNG THÁI PHIÊN HỌC (lưu trong bộ nhớ JS, KHÔNG lưu localStorage
 //          để tuân thủ đúng yêu cầu "clean slate" mỗi lần load trang)
+//   -> chatHistory dùng đúng định dạng OpenAI: role 'user' | 'assistant'
 // ================================================================
-const chatHistory = []; // { role: 'user' | 'model', text: string }
+const chatHistory = []; // { role: 'user' | 'assistant', content: string }
 let dangGoiApi = false;
 let soLuotTraoDoi = 0;          // số lượt học sinh AI phản hồi
 let hocSinhDaTuNhanHieuBai = false; // cờ đánh dấu AI vừa nói "em hiểu rồi"
@@ -388,7 +390,7 @@ function khoiDongPhongHoc(){
 
   document.getElementById('topicLabel').textContent = 'Chủ đề: ' + lessonTopic;
 
-  if (!geminiApiKey) {
+  if (!groqApiKey) {
     document.getElementById('apiKeyWarning').classList.remove('hidden');
   }
 
@@ -397,67 +399,73 @@ function khoiDongPhongHoc(){
 }
 
 // ================================================================
-// PHẦN 8: GỌI GEMINI API
+// PHẦN 8: GỌI GROQ API (chuẩn OpenAI Chat Completions)
+//   Endpoint : https://api.groq.com/openai/v1/chat/completions
+//   Model    : llama-3.3-70b-versatile
+//   Tốc độ phản hồi cực nhanh nhờ Groq LPU -> trải nghiệm chat mượt mà.
 // ================================================================
-async function goiGeminiAPI(){
-  if (!geminiApiKey) {
-    throw new Error('Chưa có Gemini API Key.');
+async function goiGroqAPI(){
+  if (!groqApiKey) {
+    throw new Error('Chưa có Groq API Key.');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiApiKey}`;
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
 
-  const body = {
-    systemInstruction: {
-      parts: [{ text: persona.systemPrompt + '\n' + QUY_TAC_CHUNG }]
-    },
-    contents: chatHistory.map(m => ({
-      role: m.role,
-      parts: [{ text: m.text }]
-    })),
-    generationConfig: {
-      maxOutputTokens: 200
-    }
+  // Ghép system prompt + toàn bộ lịch sử hội thoại theo đúng format OpenAI
+  const messages = [
+    { role: 'system', content: persona.systemPrompt + '\n' + QUY_TAC_CHUNG },
+    ...chatHistory.map(m => ({ role: m.role, content: m.content }))
+  ];
+
+  const payload = {
+    model: 'llama-3.3-70b-versatile',
+    messages: messages,
+    temperature: 0.7,
+    max_tokens: 300
   };
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + groqApiKey
+    },
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error('Gemini API lỗi: ' + res.status + ' - ' + errText);
+    throw new Error('Groq API lỗi: ' + res.status + ' - ' + errText);
   }
 
   const data = await res.json();
-  const reply = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
-  if (!reply) throw new Error('Không nhận được phản hồi hợp lệ từ Gemini.');
+  const reply = data?.choices?.[0]?.message?.content || '';
+  if (!reply) throw new Error('Không nhận được phản hồi hợp lệ từ Groq.');
   return reply.trim();
 }
 
 // Gửi một "prompt mồi" ẩn để lấy lời chào mở đầu, không hiển thị prompt này lên chat
 async function guiLoiChaoMoDau(){
-  if (!geminiApiKey) {
-    themBongBongTinNhan('model', `(Chưa có API Key nên ${studentName} chưa thể chào bạn được. Hãy vào trang "Học sinh" để cài đặt Gemini API Key nhé!)`);
+  if (!groqApiKey) {
+    themBongBongTinNhan('assistant', `(Chưa có API Key nên ${studentName} chưa thể chào bạn được. Hãy vào trang "Học sinh" để cài đặt Groq API Key nhé!)`);
     return;
   }
 
   const promptMoi = `(Đây là lệnh hệ thống, không phải lời của thầy/cô) Hãy mở đầu buổi học bằng một câu chào đúng tính cách của em, có nhắc nhẹ tới chủ đề "${lessonTopic}". Chỉ trả lời đúng như một tin nhắn chào hỏi, không nhắc lại yêu cầu này.`;
-  chatHistory.push({ role: 'user', text: promptMoi });
+  chatHistory.push({ role: 'user', content: promptMoi });
 
   hienDangSuyNghi();
   dangGoiApi = true;
   try {
-    const reply = await goiGeminiAPI();
-    chatHistory.push({ role: 'model', text: reply });
+    const reply = await goiGroqAPI();
+    chatHistory.push({ role: 'assistant', content: reply });
     anDangSuyNghi();
-    themBongBongTinNhan('model', reply);
+    themBongBongTinNhan('assistant', reply);
     kiemTraTuNhanHieuBai(reply);
     soLuotTraoDoi++;
   } catch (err) {
     anDangSuyNghi();
-    themBongBongTinNhan('model', '😥 Không thể kết nối tới Gemini API. Vui lòng kiểm tra lại API Key ở trang "Học sinh".');
+    themBongBongTinNhan('assistant', '😥 Không thể kết nối tới Groq API. Vui lòng kiểm tra lại API Key ở trang "Học sinh".');
     console.error(err);
   } finally {
     dangGoiApi = false;
@@ -473,7 +481,7 @@ const sendBtn = document.getElementById('sendBtn');
 async function guiBaiGiang(){
   const text = messageInput.value.trim();
   if (text === '' || dangGoiApi) return;
-  if (!geminiApiKey) {
+  if (!groqApiKey) {
     document.getElementById('apiKeyWarning').classList.remove('hidden');
     return;
   }
@@ -485,22 +493,22 @@ async function guiBaiGiang(){
   }
 
   themBongBongTinNhan('user', text);
-  chatHistory.push({ role: 'user', text });
+  chatHistory.push({ role: 'user', content: text });
   messageInput.value = '';
   autoResizeTextarea();
 
   hienDangSuyNghi();
   dangGoiApi = true;
   try {
-    const reply = await goiGeminiAPI();
-    chatHistory.push({ role: 'model', text: reply });
+    const reply = await goiGroqAPI();
+    chatHistory.push({ role: 'assistant', content: reply });
     anDangSuyNghi();
-    themBongBongTinNhan('model', reply);
+    themBongBongTinNhan('assistant', reply);
     kiemTraTuNhanHieuBai(reply);
     soLuotTraoDoi++;
   } catch (err) {
     anDangSuyNghi();
-    themBongBongTinNhan('model', '😥 Có lỗi khi kết nối Gemini API. Thử gửi lại nhé.');
+    themBongBongTinNhan('assistant', '😥 Có lỗi khi kết nối Groq API. Thử gửi lại nhé.');
     console.error(err);
   } finally {
     dangGoiApi = false;
