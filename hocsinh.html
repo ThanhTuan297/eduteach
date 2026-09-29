@@ -110,15 +110,15 @@
     <section class="mt-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
       <div class="flex items-center gap-2 mb-1">
         <span class="text-lg">🔑</span>
-        <h2 class="font-display font-semibold text-base" style="color: var(--green-900);">Gemini API Key</h2>
+        <h2 class="font-display font-semibold text-base" style="color: var(--green-900);">Groq API Key</h2>
       </div>
-      <p class="text-xs text-gray-400 mb-4">API Key được lưu ngay trên trình duyệt của bạn (localStorage), dùng để phòng học giao tiếp với Google Gemini.</p>
+      <p class="text-xs text-gray-400 mb-4">Nhập Groq API Key (bắt đầu bằng gsk_...). Key được lưu ngay trên trình duyệt của bạn (localStorage), dùng để phòng học giao tiếp với Groq (model Llama).</p>
 
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">
           <input
             type="password" id="apiKeyInput" autocomplete="off"
-            placeholder="Dán Gemini API Key vào đây..."
+            placeholder="Dán Groq API Key vào đây (gsk_...)"
             class="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-11 text-sm outline-none transition focus:border-transparent focus:ring-2"
             style="--tw-ring-color: var(--green-400);"
           >
@@ -223,10 +223,10 @@
   const apiKeyStatus  = document.getElementById('apiKeyStatus');
 
   // Nếu đã từng lưu API Key trước đó, tự động điền lại vào ô nhập
-  const savedApiKey = localStorage.getItem('geminiApiKey');
+  const savedApiKey = localStorage.getItem('groq_api_key');
   if (savedApiKey) {
     apiKeyInput.value = savedApiKey;
-    hienThongBaoApiKey('✅ Đã tìm thấy API Key đã lưu trước đó.', 'text-green-600');
+    hienThongBaoApiKey('✅ Đã tìm thấy Groq API Key đã lưu trước đó.', 'text-green-600');
   }
 
   // Nút hiện/ẩn API Key (giống cơ chế hiện/ẩn mật khẩu)
@@ -241,11 +241,16 @@
   saveApiKeyBtn.addEventListener('click', () => {
     const value = apiKeyInput.value.trim();
     if (value === '') {
-      hienThongBaoApiKey('⚠️ Vui lòng nhập API Key trước khi lưu.', 'text-red-500');
+      hienThongBaoApiKey('⚠️ Vui lòng nhập Groq API Key trước khi lưu.', 'text-red-500');
       return;
     }
-    localStorage.setItem('geminiApiKey', value);
-    hienThongBaoApiKey('✅ Đã lưu API Key thành công!', 'text-green-600');
+    localStorage.setItem('groq_api_key', value);
+    if (!value.startsWith('gsk_')) {
+      // Vẫn lưu bình thường, chỉ nhắc nhẹ để người dùng kiểm tra lại định dạng Key
+      hienThongBaoApiKey('✅ Đã lưu Key. Lưu ý: Groq API Key thường bắt đầu bằng "gsk_", kiểm tra lại nếu phòng học báo lỗi nhé.', 'text-amber-600');
+    } else {
+      hienThongBaoApiKey('✅ Đã lưu Groq API Key thành công!', 'text-green-600');
+    }
   });
 
   function hienThongBaoApiKey(message, colorClass){
@@ -284,8 +289,8 @@
       }
 
       // ----- Bước 2: Nhắc nhở nếu chưa lưu API Key (không chặn cứng) -----
-      if (!localStorage.getItem('geminiApiKey')) {
-        hienThongBaoApiKey('⚠️ Bạn chưa lưu Gemini API Key — phòng học sẽ không hoạt động nếu thiếu Key này.', 'text-red-500');
+      if (!localStorage.getItem('groq_api_key')) {
+        hienThongBaoApiKey('⚠️ Bạn chưa lưu Groq API Key — phòng học sẽ không hoạt động nếu thiếu Key này.', 'text-red-500');
         document.getElementById('apiKeyInput').closest('section').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
